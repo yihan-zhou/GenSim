@@ -1,4 +1,6 @@
-import openai
+from openai import OpenAI
+
+client = OpenAI()
 import argparse
 import os
 from cliport import tasks
@@ -27,12 +29,11 @@ if __name__ == "__main__":
     prompt = format_finetune_prompt(task)
 
     if True:
-        response = openai.Completion.create(
-            model=args.model,
-            prompt=prompt,
-            temperature=0,
-            max_tokens=1024)
-        res = response["choices"][0]["text"]
+        response = client.completions.create(model=args.model,
+        prompt=prompt,
+        temperature=0,
+        max_tokens=1024)
+        res = response.choices[0].text
     else:
         params = {
             "model": args.model,
@@ -40,8 +41,8 @@ if __name__ == "__main__":
             "temperature": 0.1,
             "messages": [prompt]
         }
-        call_res = openai.ChatCompletion.create(**params)
-        res = call_res["choices"][0]["message"]["content"]
+        call_res = client.chat.completions.create(**params)
+        res = call_res.choices[0].message.content
 
     print("code!:", res)
     python_file_path = f"cliport/generated_tasks/finetune_{task.replace('-','_')}.py"

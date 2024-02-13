@@ -57,7 +57,8 @@ class Agent:
 
         MAX_NUM = 10
         if len(total_tasks) > MAX_NUM:
-            total_tasks = dict(random.sample(total_tasks.items(), MAX_NUM))
+            # total_tasks = dict(random.sample(total_tasks.items(), MAX_NUM))
+            total_tasks = dict(random.sample(list(total_tasks.items()), MAX_NUM))
 
         task_prompt_text = task_prompt_text.replace("PAST_TASKNAME_TEMPLATE", format_dict_prompt(total_tasks))
 

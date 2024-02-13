@@ -25,7 +25,6 @@ from gensim.utils import set_gpt_model, clear_messages
 
 @hydra.main(config_path='../cliport/cfg', config_name='data', version_base="1.2")
 def main(cfg):
-    openai.api_key = cfg['openai_key']
 
     model_time = datetime.now().strftime("%d_%m_%Y_%H:%M:%S")
     cfg['model_output_dir'] = os.path.join(cfg['output_folder'], cfg['prompt_folder'] + "_" + model_time)

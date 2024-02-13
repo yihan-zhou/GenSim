@@ -1,4 +1,6 @@
-import openai
+from openai import OpenAI
+
+client = OpenAI(api_key=cfg['openai_key'])
 import argparse
 import os
 from cliport import tasks
@@ -28,7 +30,6 @@ def main(cfg):
     model = cfg.target_model
     prompt = format_finetune_prompt(task)
 
-    openai.api_key = cfg['openai_key']
     # model_time = datetime.now().strftime("%d_%m_%Y_%H:%M:%S")
 
     #
@@ -43,23 +44,21 @@ def main(cfg):
     for trial_i in range(cfg['trials']):
         if 'new_finetuned_model' in cfg or 'gpt-3.5-turbo' in cfg.target_model:
                 # the chat completion version
-                response = openai.ChatCompletion.create(
-                model=model,
+                response = client.chat.completions.create(model=model,
                 messages=[{"role": "system", "content": "You are an AI in robot simulation code and task design."},
                           {"role": "user", "content": prompt}],
                 temperature=0.01,
                 max_tokens=1000,
                 n=1,
                 stop=["\n```\n"])
-                res = response["choices"][0]["message"]["content"]
+                res = response.choices[0].message.content
         else:
-            response = openai.Completion.create(
-                model=model,
-                prompt=prompt,
-                temperature=0,
-                max_tokens=1800,
-                stop=["\n```\n"])
-            res = response["choices"][0]["text"]
+            response = client.completions.create(model=model,
+            prompt=prompt,
+            temperature=0,
+            max_tokens=1800,
+            stop=["\n```\n"])
+            res = response.choices[0].text
 
         simulation_runner.task_creation(res)
         simulation_runner.simulate_task()

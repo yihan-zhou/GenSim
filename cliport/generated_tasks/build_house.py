@@ -6,79 +6,84 @@ from cliport.tasks import primitives
 from cliport.tasks.grippers import Spatula
 from cliport.tasks.task import Task
 from cliport.utils import utils
+import numpy as np
+from cliport.tasks.task import Task
+from cliport.utils import utils
+
 
 class BuildHouse(Task):
-    """Construct a house structure using blocks and a cylinder."""
+    """Construct a simple house structure by stacking modifiable blocks."""
 
     def __init__(self):
         super().__init__()
-        self.max_steps = 30
-        self.lang_template = "Construct a house structure using blocks and a cylinder. Begin by forming the base of the house with four red blocks arranged in a square shape. Then build the walls by stacking two blue blocks on top of each base block. Create a roof by placing two yellow blocks on the uppermost blue blocks, angled to form an apex. Finally, position a green cylinder in the center of the square created by the base blocks to represent a chimney."
-        self.task_completed_desc = "done building house."
+        self.max_steps = 10
+        self.lang_template = "build a house with {base} as the base, {walls} as the walls, {roof} as the roof, and {chimney} as the chimney"
+        self.task_completed_desc = "done building the house."
         self.additional_reset()
 
     def reset(self, env):
         super().reset(env)
 
-        # Add blocks for the base.
+        # Define the colors and sizes for each part of the house
+        base_color = utils.COLORS['green']
+        wall_color = utils.COLORS['red']
+        roof_color = utils.COLORS['blue']
+        chimney_color = utils.COLORS['yellow']
+
+        base_size = (0.15, 0.05, 0.02)  # Large green blocks
+        wall_size = (0.1, 0.05, 0.02)   # Medium red blocks
+        roof_size = (0.15, 0.1, 0.02)   # Large blue block
+        chimney_size = (0.05, 0.05, 0.05)  # Small yellow block
+
+        # Add base blocks
         base_blocks = []
-        block_size = (0.04, 0.04, 0.04)  # x, y, z dimensions for the block size
-        block_urdf = 'box/box-template.urdf'
-        for _ in range(4):
-            block_pose = self.get_random_pose(env, block_size)
-            base_block_urdf = self.fill_template(block_urdf,  {'DIM': (0.06, 0.06, 0.04)})
+        for _ in range(3):
+            pose = self.get_random_pose(env, base_size)
+            urdf = 'stacking/block.urdf'
+            base_id = env.add_object(urdf, pose, color=base_color)
+            base_blocks.append(base_id)
 
-            block_id = env.add_object(base_block_urdf, block_pose, color=utils.COLORS['red'])
-            base_blocks.append(block_id)
-
-        # Add blocks for the walls.
+        # Add wall blocks
         wall_blocks = []
-        for _ in range(4):
-            block_pose = self.get_random_pose(env, block_size)
-            wall_block_urdf = self.fill_template(block_urdf,  {'DIM': (0.04, 0.04, 0.04)})
-
-            block_id = env.add_object(wall_block_urdf, block_pose, color=utils.COLORS['blue'])
-            wall_blocks.append(block_id)
-
-        # Add blocks for the roof.
-        roof_blocks = []
         for _ in range(2):
-            block_pose = self.get_random_pose(env, block_size)
-            roof_block_urdf = self.fill_template(block_urdf,  {'DIM': (0.04, 0.1, 0.04)})
+            pose = self.get_random_pose(env, wall_size)
+            urdf = 'stacking/block.urdf'
+            wall_id = env.add_object(urdf, pose, color=wall_color)
+            wall_blocks.append(wall_id)
 
-            block_id = env.add_object(roof_block_urdf, block_pose, color=utils.COLORS['yellow'])
-            roof_blocks.append(block_id)
+        # Add roof block
+        roof_pose = self.get_random_pose(env, roof_size)
+        roof_urdf = 'stacking/block.urdf'
+        roof_id = env.add_object(roof_urdf, roof_pose, color=roof_color)
 
-        # Add cylinder for the chimney.
-        cylinder_template = 'cylinder/cylinder-template.urdf'
-        cylinder_size = (0.04,0.04,0.02)
-        replace = {'DIM': cylinder_size} #  radius and height dimensions for the cylinder size
-        cylinder_urdf = self.fill_template(cylinder_template, replace)
-        cylinder_pose = self.get_random_pose(env, cylinder_size)
-        chimney_id = env.add_object(cylinder_urdf, cylinder_pose, color=utils.COLORS['green'])
+        # Add chimney block
+        chimney_pose = self.get_random_pose(env, chimney_size)
+        chimney_urdf = 'stacking/block.urdf'
+        chimney_id = env.add_object(chimney_urdf, chimney_pose, color=chimney_color)
 
-        # Define the target poses for the base, walls, roof, and chimney.
-        base_target_poses = [(0.7, -0.3, 0.02), (0.7, -0.2, 0.02), (0.6, -0.3, 0.02), (0.6, -0.2, 0.02)]
-        wall_target_poses = [(0.7, -0.3, 0.06), (0.7, -0.2, 0.06), (0.6, -0.3, 0.06), (0.6, -0.2, 0.06) ]
-        roof_target_poses = [(0.7, -0.25, 0.1), (0.6, -0.25, 0.1)]
-        chimney_target_pose = [(0.65, -0.2, 0.12)]
-        self.add_corner_anchor_for_pose(env, base_target_poses[0])
+        # Define target poses for each part of the house
+        base_target_poses = [self.get_random_pose(env, base_size) for _ in base_blocks]
+        wall_target_poses = [self.get_random_pose(env, wall_size) for _ in wall_blocks]
+        roof_target_pose = self.get_random_pose(env, roof_size)
+        chimney_target_pose = self.get_random_pose(env, chimney_size)
 
-
-        # Add goals for each step of the house construction.
-        # Break the language prompt step-by-step
-        self.add_goal(objs=base_blocks, matches=np.ones((4, 4)), targ_poses=base_target_poses, replace=False,
+        # Add goals for each part of the house
+        # Base layer goal
+        self.add_goal(objs=base_blocks, matches=np.ones((3, 3)), targ_poses=base_target_poses, replace=False,
                       rotations=True, metric='pose', params=None, step_max_reward=1 / 4,
-                      language_goal="Construct a house structure using blocks and a cylinder. Begin by forming the base of the house with four red blocks arranged in a square shape.")
+                      language_goal=self.lang_template.format(base="three large green blocks", walls="", roof="", chimney=""))
 
-        self.add_goal(objs=wall_blocks, matches=np.ones((4, 4)), targ_poses=wall_target_poses, replace=False,
+        # Wall layer goal
+        self.add_goal(objs=wall_blocks, matches=np.ones((2, 2)), targ_poses=wall_target_poses, replace=False,
                       rotations=True, metric='pose', params=None, step_max_reward=1 / 4,
-                      language_goal="Then build the walls by stacking two blue blocks on top of each base block. ")
+                      language_goal=self.lang_template.format(base="", walls="two medium red blocks on top of the green blocks", roof="", chimney=""))
 
-        self.add_goal(objs=roof_blocks, matches=np.ones((2, 2)), targ_poses=roof_target_poses, replace=False,
+        # Roof layer goal
+        self.add_goal(objs=[roof_id], matches=np.ones((1, 1)), targ_poses=[roof_target_pose], replace=False,
                       rotations=True, metric='pose', params=None, step_max_reward=1 / 4,
-                      language_goal="Create a roof by placing two yellow blocks on the uppermost blue blocks, angled to form an apex. ")
+                      language_goal=self.lang_template.format(base="", walls="", roof="a large blue block spanning the red blocks as the roof", chimney=""))
 
-        self.add_goal(objs=[chimney_id], matches=np.ones((1, 1)), targ_poses=chimney_target_pose, replace=False,
+        # Chimney goal
+        self.add_goal(objs=[chimney_id], matches=np.ones((1, 1)), targ_poses=[chimney_target_pose], replace=False,
                       rotations=True, metric='pose', params=None, step_max_reward=1 / 4,
-                      language_goal="Finally, position a green cylinder in the center of the square created by the base blocks to represent a chimney.")
+                      language_goal=self.lang_template.format(base="", walls="", roof="", chimney="a small yellow block on top as a chimney"))

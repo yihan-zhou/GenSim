@@ -32,7 +32,9 @@ from pygments.lexers import PythonLexer
 from pygments.formatters import TerminalFormatter
 import re
 
-import openai
+from openai import OpenAI
+
+client = OpenAI(api_key="YOUR_KEY")
 import IPython
 import time
 import pybullet as p
@@ -57,7 +59,6 @@ from cliport.simgen_utils import (mkdir_if_missing,
 
 
 
-openai.api_key = "YOUR_KEY"
 model = "gpt-4"
 NEW_TASK_LIST = []
 full_interaction = ''
@@ -78,7 +79,7 @@ def generate_feedback(prompt, max_tokens=2048, temperature=0.0, model="gpt-4", a
         try:
             if interaction_txt is not None:
                 interaction_txt = add_to_txt(interaction_txt, ">>> Prompt: \n" + prompt, with_print=False)
-            res = openai.ChatCompletion.create(**params)["choices"][0]["message"]["content"]
+            res = client.chat.completions.create(**params)["choices"][0]["message"]["content"]
             to_print = highlight(f"{res}", PythonLexer(), TerminalFormatter())
             print(to_print)
             if interaction_txt is not None:

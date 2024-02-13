@@ -15,7 +15,9 @@ from pygments.lexers import PythonLexer
 from pygments.formatters import TerminalFormatter
 import re
 
-import openai
+from openai import OpenAI
+
+client = OpenAI()
 import IPython
 import time
 import pybullet as p
@@ -364,8 +366,8 @@ def generate_feedback(prompt, max_tokens=2048, temperature=0.0, interaction_txt=
         try:
             if interaction_txt is not None:
                 add_to_txt(interaction_txt, ">>> Prompt: \n" + prompt, with_print=False)
-            call_res = openai.ChatCompletion.create(**params)
-            res = call_res["choices"][0]["message"]["content"]
+            call_res = client.chat.completions.create(**params)
+            res = call_res.choices[0].message.content
             existing_messages.append({"role": "assistant", "content": res})
 
             to_print = highlight(f"{res}", PythonLexer(), TerminalFormatter())
@@ -374,7 +376,7 @@ def generate_feedback(prompt, max_tokens=2048, temperature=0.0, interaction_txt=
                 add_to_txt(interaction_txt,  ">>> Answer: \n" + res, with_print=False)
 
             if n > 1:
-                return [r["message"]["content"] for r in call_res["choices"]]
+                return [r["message"]["content"] for r in call_res.choices]
             return res
 
         except Exception as e:
@@ -414,8 +416,8 @@ def generate_feedback_completion_only(prompt, max_tokens=800, temperature=0.0, i
         try:
             if interaction_txt is not None:
                 add_to_txt(interaction_txt, ">>> Prompt: \n" + prompt, with_print=False)
-            call_res = openai.Completion.create(**params)
-            res = call_res["choices"][0]["text"]
+            call_res = client.completions.create(**params)
+            res = call_res.choices[0].text
 
             to_print = highlight(f"{res}", PythonLexer(), TerminalFormatter())
             print(to_print)
@@ -423,7 +425,7 @@ def generate_feedback_completion_only(prompt, max_tokens=800, temperature=0.0, i
                 add_to_txt(interaction_txt,  ">>> Answer: \n" + res, with_print=False)
 
             if n > 1:
-                return [r["text"] for r in call_res["choices"]]
+                return [r["text"] for r in call_res.choices]
             return res
 
         except Exception as e:
